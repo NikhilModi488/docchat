@@ -24,7 +24,7 @@ FROM python:3.11-slim
 
 # Ollama + Tesseract (optional OCR) + libs some wheels need.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl ca-certificates tesseract-ocr libgl1 libglib2.0-0 \
+        curl ca-certificates zstd tesseract-ocr libgl1 libglib2.0-0 \
     && curl -fsSL https://ollama.com/install.sh | sh \
     && rm -rf /var/lib/apt/lists/*
 
@@ -33,6 +33,8 @@ ENV PYTHONUNBUFFERED=1 \
     KMP_DUPLICATE_LIB_OK=TRUE \
     PIP_NO_CACHE_DIR=1 \
     OLLAMA_HOST=http://127.0.0.1:11434 \
+    OLLAMA_MODELS=/data/.ollama/models \
+    HOME=/data \
     RAG_LLM_MODEL=llama3.2 \
     RAG_STATIC_DIR=/app/static \
     RAG_DATABASE_URL=sqlite:////data/rag.db \
@@ -52,7 +54,7 @@ COPY --from=frontend /fe/dist ./static
 
 # Writable data dir for SQLite, FAISS index, uploads, model + HF caches.
 # HF Spaces runs as uid 1000; make these writable regardless of user.
-RUN mkdir -p /data/hf uploads vectorstore logs \
+RUN mkdir -p /data/hf /data/.ollama/models uploads vectorstore logs \
     && chmod -R 777 /data /app/uploads /app/vectorstore /app/logs
 
 COPY deploy/entrypoint.sh /entrypoint.sh
