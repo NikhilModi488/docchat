@@ -75,3 +75,28 @@ def health() -> dict:
 # Mount routers under /api (matches the spec endpoint paths).
 for r in (auth.router, documents.router, chat.router, conversations.router, feedback.router, analytics.router):
     app.include_router(r, prefix="/api")
+
+
+# --- Optional: serve the built frontend from the same container ----------- #
+# When a built SPA is present (RAG_STATIC_DIR, default ./static), serve it at
+# "/" with history-API fallback. This lets a single image (e.g. a Hugging Face
+# Space) host both the API and the UI. No-op for local dev where Vite serves
+# the frontend separately, so existing behaviour/tests are unchanged.
+import os
+from pathlib import Path as _Path
+
+_static_dir = _Path(os.getenv("RAG_STATIC_DIR", "static"))
+if _static_dir.is_dir() and (_static_dir / "index.html").exists():
+    from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/assets", StaticFiles(directory=_static_dir / "assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    def _spa(full_path: str):  # pragma: no cover - exercised only in container
+        candidate = _static_dir / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(_static_dir / "index.html")
+
+    logger.info("Serving built frontend from %s", _static_dir)

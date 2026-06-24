@@ -1,0 +1,16 @@
+# Keep the all-in-one build context lean.
+**/node_modules
+**/.venv
+**/__pycache__
+**/dist
+backend/vectorstore
+backend/db
+backend/uploads
+backend/logs
+backend/.env
+local-rag-chatbot
+.git
+.claude
+**/.claude
+*.md
+!README.md
