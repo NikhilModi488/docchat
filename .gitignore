@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Secrets / local env
+backend/.env
+.env
+*.local
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Runtime data (regenerated at runtime — never commit)
+backend/vectorstore/
+backend/db/
+backend/uploads/
+backend/logs/
+backend/chroma_store/
+*.faiss
+*.sqlite
+*.sqlite3
+
+# Models / caches
+.cache/
+*.bin
+*.pt
+
+# Legacy standalone project (not part of DocChat)
+local-rag-chatbot/
+
+# OS / editor / tooling
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/
+**/.claude/

@@ -1,0 +1,73 @@
+# DocChat — full-stack Document RAG Chatbot.
+#
+# Fully self-contained: `docker compose up` starts Ollama (local LLM),
+# pulls the chat model, then boots the FastAPI backend and the React frontend.
+# No host dependencies required.
+#
+#   Frontend:  http://localhost:8080
+#   Backend:   http://localhost:8000  (proxied at /api by the frontend)
+#
+# Embeddings run in-process via sentence-transformers (all-MiniLM-L6-v2),
+# so Ollama only needs to serve the chat model.
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  # One-shot: pull the chat model into the ollama volume, then exit.
+  ollama-pull:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: "http://ollama:11434"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["ollama pull ${RAG_LLM_MODEL:-llama3.2}"]
+    restart: "no"
+
+  backend:
+    build: ./backend
+    depends_on:
+      ollama:
+        condition: service_healthy
+      ollama-pull:
+        condition: service_completed_successfully
+    environment:
+      OLLAMA_HOST: "http://ollama:11434"
+      RAG_LLM_MODEL: "${RAG_LLM_MODEL:-llama3.2}"
+      RAG_DATABASE_URL: "sqlite:////app/db/rag.db"
+      RAG_CORS_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080"
+      # Override in production:  RAG_JWT_SECRET=... docker compose up
+      RAG_JWT_SECRET: "${RAG_JWT_SECRET:-change-me-in-production-please}"
+    volumes:
+      - rag_uploads:/app/uploads
+      - rag_vectorstore:/app/vectorstore
+      - rag_db:/app/db
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  rag_uploads:
+  rag_vectorstore:
+  rag_db:
+  ollama_models:
